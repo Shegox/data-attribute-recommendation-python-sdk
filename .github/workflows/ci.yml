@@ -68,8 +68,7 @@ jobs:
       - run: pip install -r requirements-test.txt
       
       - name: Run system tests with tox
-        # run: tox -e system_tests 
-        run: mkdir system_test_results && echo "dummy results" > system_test_results\traceability.html
+        run: tox -e system_tests 
         env:
           DAR_CLIENT_ID: ${{ secrets.DAR_CLIENT_ID }}
           DAR_CLIENT_SECRET: ${{ secrets.DAR_CLIENT_SECRET }}
