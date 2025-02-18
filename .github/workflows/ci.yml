@@ -70,6 +70,8 @@ jobs:
           pip install tox
       - name: Run tests with tox
         run: tox -e ${{ matrix.toxenv }}
+        env: 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   system-tests:
     name: System Tests
