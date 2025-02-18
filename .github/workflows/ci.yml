@@ -8,12 +8,8 @@ on:
   pull_request:
     branches:
       - main
-env:
-  DAR_CLIENT_ID: ${{ secrets.DAR_CLIENT_ID }}
-  DAR_CLIENT_SECRET: ${{ secrets.DAR_CLIENT_SECRET }}
-  DAR_AUTH_URL: ${{ secrets.DAR_AUTH_URL }}
-  DAR_URL: ${{ secrets.DAR_URL }}
 
+permissions: read-all
 
 jobs:
   lint:
@@ -35,7 +31,6 @@ jobs:
         run: pre-commit run --all-files
 
   tests:
-    name: ${{ matrix.os }} Tests
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -67,7 +62,6 @@ jobs:
       - name: Install test dependencies
         run: |
           pip install -r requirements-test.txt
-          pip install tox
       - name: Run tests with tox
         run: tox -e ${{ matrix.toxenv }}
         env: 
@@ -78,23 +72,28 @@ jobs:
     runs-on: windows-latest
     needs: [tests, lint]
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rel/'))
+    permissions: 
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Python using Chocolatey
-        run: |
-          choco install python --version 3.10.8
-          python -m pip install --upgrade pip
-      - name: Add Python to Path
-        run: echo "C:\Python310;C:\Python310\Scripts" >> $env:GITHUB_PATH
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.10.8
 
       - name: Install test dependencies
         run: |
           pip install -r requirements-test.txt
-          pip install tox
       - name: Run system tests with tox
-        run: tox -e system_tests
+        run: tox -e system_tests 
+        # run: echo "dummy results" > system_test_results/traceability.html
+        env:
+          DAR_CLIENT_ID: ${{ secrets.DAR_CLIENT_ID }}
+          DAR_CLIENT_SECRET: ${{ secrets.DAR_CLIENT_SECRET }}
+          DAR_AUTH_URL: ${{ secrets.DAR_AUTH_URL }}
+          DAR_URL: ${{ secrets.DAR_URL }}
 
       - name: Github Release
         if: startsWith(github.ref, 'refs/tags/rel/')
@@ -103,7 +102,7 @@ jobs:
           body: "Tagging release ${{ github.ref }}"
           # API key for a machine user specifically created for this task:
           # https://github.com/dar-sdk-machine-user
-          token: ${{ secrets.API_KEY }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           files: system_test_results/traceability.html
 
   deploy:
@@ -111,12 +110,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [system-tests]
     if: github.event_name != 'pull_request' && startsWith(github.ref, 'refs/tags/rel/')
+    permissions:
+      contents: read
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -125,6 +127,5 @@ jobs:
 
       - name: Deploy release to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
+        # Uses OIDC/Workload identies and doesn't require a token
+        # Requires setup in PyPi using a trusted publisher: https://docs.pypi.org/trusted-publishers/adding-a-publisher/
