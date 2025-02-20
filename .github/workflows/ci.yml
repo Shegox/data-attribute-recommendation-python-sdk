@@ -53,7 +53,7 @@ jobs:
         env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Build distributions
-        run: python -m build --sdist --wheel
+        run: python setup.py sdist bdist_wheel
 
   system-tests:
     name: System Tests
@@ -103,7 +103,7 @@ jobs:
 
 
       - name: Build distributions
-        run: python -m build --sdist --wheel
+        run: python setup.py sdist bdist_wheel
 
       - name: Upload release to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
