@@ -52,8 +52,9 @@ jobs:
         run: tox -e ${{ matrix.toxenv }}
         env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: pip install build
       - name: Build distributions
-        run: python setup.py sdist bdist_wheel
+        run: python -m build sdist bdist_wheel
 
   system-tests:
     name: System Tests
